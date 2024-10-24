@@ -23,25 +23,25 @@ def generate_h5py_database():
         img = Image.open(img_path)
         img = np.array(img)/255
         train_img_l.append(img)
-        train_label_l.append(0)
+        train_label_l.append([1, 0])
     
     for img_path in glob.glob(os.path.join(img_dir_type2, '*.jpg')):
         img = Image.open(img_path)
         img = np.array(img) / 255.0  # Normalize pixel values
         train_img_l.append(img)
-        train_label_l.append(1)  # Label for type 2 images
+        train_label_l.append([0, 1])  # Label for type 2 images
         
     for img_path in glob.glob(os.path.join(test_dir_type1, '*.jpg')):
         img = Image.open(img_path)
         img = np.array(img)/255
         test_img_l.append(img)
-        test_label_l.append(0)
+        test_label_l.append([1, 0])
     
     for img_path in glob.glob(os.path.join(test_dir_type2, '*.jpg')):
         img = Image.open(img_path)
         img = np.array(img) / 255.0  # Normalize pixel values
         test_img_l.append(img)
-        test_label_l.append(1)  # Label for type 2 images
+        test_label_l.append([0, 1])  # Label for type 2 images
 
     output_dir = "/home/leom/code/Brain_Tumor_MRI_Image_hdf5/"
     
@@ -60,6 +60,45 @@ def generate_h5py_database():
         f.create_dataset('images', data=test_img_data)
         f.create_dataset('labels', data=test_label_l)    
 
+def split_train_database(dbase_path, split):
+    assert os.path.isfile(os.path.join(dbase_path, 'training.h5')), f"need training.h5 file in {dbase_path}"
+    with h5py.File(os.path.join(dbase_path, 'training.h5'), 'r') as f:
+        # get the dataset names
+        dataset_names = list(f.keys())
+        
+        # Get the length of the dataset
+        dataset_length = len(f[dataset_names[0]])
+        
+        # Generate a random permutation of the indices
+        indices = np.random.permutation(dataset_length)
+        
+    
+        # Split the data into training and validation sets
+        train_size = int(split * dataset_length)  # 80% for training
+        val_size = dataset_length - train_size  # 20% for validation
+        
+        # Get the indices for the training and validation sets
+        train_indices = indices[:train_size]
+        val_indices = indices[train_size:]
+        train_indices.sort()
+        val_indices.sort()
+        train_split_path = os.path.join(dbase_path, 'train_split.h5')
+        val_split_path = os.path.join(dbase_path, 'val_split.h5')
+        
+        # Create new HDF5 files for training and validation
+        with h5py.File(train_split_path, 'w') as train_f, h5py.File(val_split_path, 'w') as val_f:
+            # Loop through each dataset
+            for dataset_name in dataset_names:
+                # Get the dataset
+                dataset = f[dataset_name]
+
+                # Get the training and validation data using the shuffled indices
+                train_data = dataset[train_indices]
+                val_data = dataset[val_indices]
+
+                # Create new datasets in the training and validation HDF5 files
+                train_f.create_dataset(dataset_name, data=train_data)
+                val_f.create_dataset(dataset_name, data=val_data)
 
 def load_database():
     """with keys 'images' and 'labels'
@@ -72,3 +111,12 @@ def load_database():
     train_dbase = h5py.File(os.path.join(dir_path, "training.h5"), 'r') 
     test_dbase =  h5py.File(os.path.join(dir_path, "training.h5"), 'r')
     return train_dbase, test_dbase
+
+def main():
+    # generate_h5py_database()
+    dbase_path = "/home/leom/code/Brain_Tumor_MRI_Image_hdf5/"
+    split = 0.9
+    split_train_database(dbase_path, split)
+
+if __name__ == '__main__':
+    main()

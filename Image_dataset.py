@@ -1,6 +1,6 @@
 import h5py
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
 class ImageDataset(Dataset):
     def __init__(self, h5_file_path, transform=None):
@@ -14,10 +14,10 @@ class ImageDataset(Dataset):
         return self.images.shape[0]
     
     def __getitem__(self, idx):
-        img = self.images['images'][idx]
+        img = self.images[idx]
         if self.transform is not None:
             img = self.transform(img)
-        label = self.labels['labels'][idx]
+        label = self.labels[idx]
         return img, label
 
     def close(self):
